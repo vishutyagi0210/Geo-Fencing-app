@@ -13,6 +13,8 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.LocationServices;
@@ -28,16 +30,18 @@ import com.google.android.gms.location.GeofencingRequest;
 
 import android.util.Log;
 
+import java.util.UUID;
+
 public class Maps extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapLongClickListener {
     private static final int REQUEST_CODE = 1;
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
 
     private int radius = 20;
+    private LatLng latLng;
 
     //  geoFencing reference variables
     GeofencingClient geofencingClient;
-    LatLng latLng;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,17 +61,83 @@ public class Maps extends FragmentActivity implements OnMapReadyCallback, Google
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
         // Add a marker in Sydney and move the camera
         LatLng sydney = new LatLng(-34, 151);
         mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
 
+
         geofencingClient = LocationServices.getGeofencingClient(this);
 
+//      Taking users permission
         enableUserLocation();
+//      showing mark and circle region and initialising geofence
         mMap.setOnMapLongClickListener(this);
+
     }
+
+    @Override
+//  when user long press on map.
+    public void onMapLongClick(@NonNull LatLng latLng) {
+        this.latLng = latLng;
+//      clearing previous marks first
+        mMap.clear();
+//      setting new marks on map
+        addMarker(latLng);
+        addCircle(latLng, radius);
+
+//      checking is phone have google play services enabled
+        boolean bool = isGooglePlayServicesAvailable();
+//      if user have google play services then It go forward and create a geo fence.
+        if (bool) {
+            addGeoFence();
+        }
+        else {
+            Log.e("play services", "not enables");
+        }
+
+    }
+
+
+    private void addGeoFence() {
+        Log.d("Google play services", "Yes, your phone has google play services enabled");
+
+
+        String id = UUID.randomUUID().toString();
+        Geofence geofence = new Geofence.Builder()
+                .setRequestId(id)
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
+                .setCircularRegion(latLng.latitude,latLng.longitude, radius) // Try changing your radius
+                .setExpirationDuration(Geofence.NEVER_EXPIRE)
+                .build();
+
+        // Create geofence request
+        GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
+            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
+            .addGeofence(geofence)
+            .build();
+
+        // Create pending intent for geofence transitions
+        Intent intent = new Intent(this, GeofenceTransitionBroadcastReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+
+        // Add the geofence to the geofencing client
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+//      adding geofence
+        geofencingClient.addGeofences(geofencingRequest, pendingIntent)
+            .addOnSuccessListener(this, aVoid -> {
+                Log.d("sucessfull bro", "you did it.");
+            })
+            .addOnFailureListener(this, e -> {
+                // Failed to add geofences
+                Log.e("Geofence", "Sorry bro, you again failed..... don't worry try agin... " + e.getMessage());
+            });
+    }
+
 
     private void enableUserLocation() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -94,6 +164,13 @@ public class Maps extends FragmentActivity implements OnMapReadyCallback, Google
         }
     }
 
+//  checking is the user phone has play service available or not.
+    public boolean isGooglePlayServicesAvailable() {
+        GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
+        int resultCode = googleApiAvailability.isGooglePlayServicesAvailable(this);
+        return resultCode == ConnectionResult.SUCCESS;
+    }
+
     public void addMarker(LatLng latLng) {
         MarkerOptions markerOptions = new MarkerOptions().position
                 (latLng);
@@ -108,45 +185,5 @@ public class Maps extends FragmentActivity implements OnMapReadyCallback, Google
         circleOptions.fillColor(Color.argb(70, 255, 0, 0));
         circleOptions.strokeWidth(3);
         mMap.addCircle(circleOptions);
-    }
-
-    @Override
-    public void onMapLongClick(@NonNull LatLng latLng) {
-        mMap.clear();
-        addMarker(latLng);
-        addCircle(latLng, radius);
-
-
-        Geofence geofence = new Geofence.Builder()
-                .setRequestId("myGeofence") // Unique ID for the geofence
-                .setCircularRegion(latLng.latitude, latLng.longitude, radius)
-                .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
-                .build();
-
-        // Create geofence request
-        GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
-                .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-                .addGeofence(geofence)
-                .build();
-
-        // Create pending intent for geofence transitions
-        Intent intent = new Intent(this, GeofenceTransitionBroadcastReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
-
-        // Add the geofence to the geofencing client
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-
-        geofencingClient.addGeofences(geofencingRequest, pendingIntent)
-                .addOnSuccessListener(this, aVoid -> {
-                    // Geofences added successfully
-                })
-                .addOnFailureListener(this, e -> {
-                    // Failed to add geofences
-                    Log.e("Geofence", "Sorry bro, you again failed..... don't worry try agin... " + e.getMessage());
-                });
     }
 }

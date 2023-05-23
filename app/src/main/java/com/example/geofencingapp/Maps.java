@@ -103,9 +103,9 @@ public class Maps extends FragmentActivity implements OnMapReadyCallback, Google
         Log.d("Google play services", "Yes, your phone has google play services enabled");
 
 
-        String id = UUID.randomUUID().toString();
+//        String id = UUID.randomUUID().toString();
         Geofence geofence = new Geofence.Builder()
-                .setRequestId(id)
+                .setRequestId("uniqueId")
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
                 .setCircularRegion(latLng.latitude,latLng.longitude, radius) // Try changing your radius
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)

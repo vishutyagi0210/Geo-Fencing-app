@@ -37,7 +37,7 @@ public class Maps extends FragmentActivity implements OnMapReadyCallback, Google
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
 
-    private int radius = 20;
+    private final int radius = 20;
     private LatLng latLng;
 
     //  geoFencing reference variables
@@ -103,17 +103,20 @@ public class Maps extends FragmentActivity implements OnMapReadyCallback, Google
         Log.d("Google play services", "Yes, your phone has google play services enabled");
 
 
-//        String id = UUID.randomUUID().toString();
+        String id = UUID.randomUUID().toString();
         Geofence geofence = new Geofence.Builder()
-                .setRequestId("uniqueId")
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
+                .setRequestId(id)
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT | Geofence.GEOFENCE_TRANSITION_DWELL)
                 .setCircularRegion(latLng.latitude,latLng.longitude, radius) // Try changing your radius
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
+                .setLoiteringDelay(5000)
                 .build();
+
+        Log.d("latitude and lognitude" ,""+latLng.latitude + " next : "+latLng.longitude);
 
         // Create geofence request
         GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
-            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
+            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER | GeofencingRequest.INITIAL_TRIGGER_DWELL | GeofencingRequest.INITIAL_TRIGGER_EXIT)
             .addGeofence(geofence)
             .build();
 
@@ -121,20 +124,28 @@ public class Maps extends FragmentActivity implements OnMapReadyCallback, Google
         Intent intent = new Intent(this, GeofenceTransitionBroadcastReceiver.class);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
 
-        // Add the geofence to the geofencing client
+
+
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
+
+            // Permission has not been granted, so request it
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, REQUEST_CODE);
+
+        } else {
+            // Permission has already been granted
+            // Your code to handle the location access
+            Log.d("permission granted?" , "yes bro , permission is granted. you are good to go.");
         }
 
-//      adding geofence
+
         geofencingClient.addGeofences(geofencingRequest, pendingIntent)
             .addOnSuccessListener(this, aVoid -> {
                 Log.d("sucessfull bro", "you did it.");
             })
             .addOnFailureListener(this, e -> {
                 // Failed to add geofences
-                Log.e("Geofence", "Sorry bro, you again failed..... don't worry try agin... " + e.getMessage());
+                Log.e("Geofence", "Sorry bro, you again failed..... don't worry try agin..." + e.getMessage());
             });
     }
 

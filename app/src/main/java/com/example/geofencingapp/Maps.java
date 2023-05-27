@@ -27,6 +27,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.geofencingapp.databinding.ActivityMapsBinding;
 import com.google.android.gms.location.GeofencingRequest;
+import com.google.android.gms.location.Geofence;
 
 import android.util.Log;
 
@@ -42,6 +43,9 @@ public class Maps extends FragmentActivity implements OnMapReadyCallback, Google
 
     //  geoFencing reference variables
     GeofencingClient geofencingClient;
+    String id;
+    Geofence geofence;
+    GeofencingRequest geofencingRequest;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,11 +107,11 @@ public class Maps extends FragmentActivity implements OnMapReadyCallback, Google
         Log.d("Google play services", "Yes, your phone has google play services enabled");
 
 
-        String id = UUID.randomUUID().toString();
-        Geofence geofence = new Geofence.Builder()
+        id = UUID.randomUUID().toString();
+        geofence = new Geofence.Builder()
                 .setRequestId(id)
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT | Geofence.GEOFENCE_TRANSITION_DWELL)
-                .setCircularRegion(latLng.latitude,latLng.longitude, radius) // Try changing your radius
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
+                .setCircularRegion(latLng.latitude, latLng.longitude, radius)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
                 .setLoiteringDelay(5000)
                 .build();
@@ -115,7 +119,7 @@ public class Maps extends FragmentActivity implements OnMapReadyCallback, Google
         Log.d("latitude and lognitude" ,""+latLng.latitude + " next : "+latLng.longitude);
 
         // Create geofence request
-        GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
+        geofencingRequest = new GeofencingRequest.Builder()
             .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER | GeofencingRequest.INITIAL_TRIGGER_DWELL | GeofencingRequest.INITIAL_TRIGGER_EXIT)
             .addGeofence(geofence)
             .build();
